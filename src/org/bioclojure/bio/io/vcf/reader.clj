@@ -1,7 +1,6 @@
 (ns org.bioclojure.bio.io.vcf.reader
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]
-            [org.bioclojure.bio.io.vcf.header-parser :as hp]
+            [org.bioclojure.bio.io.vcf.header-parser :refer [parse-headers]]
             [org.bioclojure.bio.io.vcf.variant-parser :refer [variant-parser]])
   (:import [java.util.zip GZIPInputStream]
            [java.io IOException]))
@@ -32,7 +31,7 @@
 (defn vcf-reader
   [vcf]
   (let [reader (io/reader (open-input-stream vcf))
-        headers (hp/parse-headers (take-while header? (line-seq reader)))]
+        headers (parse-headers (take-while header? (line-seq reader)))]
     (VcfReader. reader headers)))
 
 (defn sample-ids

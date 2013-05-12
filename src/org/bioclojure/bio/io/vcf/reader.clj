@@ -22,7 +22,7 @@
 
 ;; The VcfReader record stores a java.io.BufferedReader and the parsed
 ;; VCF headers. We implement the java.io.Closeable interface so that a
-;; VcfReader object can be usen in with-open.
+;; VcfReader object can be used in with-open.
 (defrecord VcfReader [reader headers]
   java.io.Closeable
   (close [_]

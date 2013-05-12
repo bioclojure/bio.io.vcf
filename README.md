@@ -5,6 +5,22 @@ as defined by the 1000 Genomes Project:
 
 http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41
 
+## Installing
+
+Available from [Clojars](https://clojars.org/org.bioclojure/bio.io.vcf)
+
+### Leiningen
+
+    [org.bioclojure/bio.io.vcf "0.1.0-SNAPSHOT"]
+
+### Maven
+
+    <dependency>
+      <groupId>org.bioclojure</groupId>
+      <artifactId>bio.io.vcf</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
+    </dependency>
+
 ## Usage
 
 Load the reader:

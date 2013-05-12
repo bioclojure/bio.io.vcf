@@ -28,3 +28,7 @@
 
     (fact "The first variant returned by vcf/variant-seq is as expected"
           (first variants) => parsed-variant)))
+
+(fact "We can read a compressed VCF"
+      (with-open [v (vcf/vcf-reader compressed-vcf)]
+        (count (vcf/variant-seq v)) => 5))

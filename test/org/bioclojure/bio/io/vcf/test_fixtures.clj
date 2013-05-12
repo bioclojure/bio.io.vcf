@@ -3,6 +3,8 @@
 
 (def vcf (io/resource "example.vcf"))
 
+(def compressed-vcf (io/resource "example.vcf.gz"))
+
 (def vcf-data (with-open [rdr (io/reader vcf)]
                 (doall (line-seq rdr))))
 

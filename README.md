@@ -25,6 +25,9 @@ underlying input stream is closed.
     (with-open [v (vcf/vcf-reader (io/resource "sample.vcf"))]
        (doall (vcf/variant-seq v)))
 
+    (with-open [v (vcf/vcf-reader "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20110521/ALL.chr1.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz")] 
+       (first (vcf/variant-seq v)))
+
 ### header
 
 Returns the requested header from a vcf:

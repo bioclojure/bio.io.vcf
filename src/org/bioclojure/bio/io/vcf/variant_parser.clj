@@ -1,10 +1,10 @@
 (ns org.bioclojure.bio.io.vcf.variant-parser
   (:require [clojure.string :as str]
             [org.bioclojure.bio.io.vcf.parser-util :refer [delimited-str missing]]
-            [blancas.kern.core :refer [value <|>]]
+            [blancas.kern.core :refer [value <|> field*]]
             [blancas.kern.lexer.basic :refer [dec-lit float-lit comma-sep]]))
 
-(defn- build-parser
+(defn ^:testable ^:private build-parser
   "Construct a map of parsers for INFO or FORMAT fields, according to
   the number and type defined in the headers. Return a function that takes
   a key/value pair and returns a vector of key and (possibly parsed) value."
@@ -19,7 +19,7 @@
                        (case type
                          "Integer" (partial value (comma-sep (<|> missing dec-lit)))
                          "Float"   (partial value (comma-sep (<|> missing float-lit)))
-                         identity)))
+                         (partial value (comma-sep (<|> missing (field* ",")))))))
         parsers (zipmap (keys spec) (map parser-for (vals spec)))]
     (fn [[k & [v]]]
       (if-let [p (parsers k)]
@@ -29,14 +29,14 @@
 ;; N.B. This doesn't cope with quoted string values in an INFO field.
 ;; The VCF specification isn't clear on whether or not the value can
 ;; be quoted.
-(defn- parse-info
+(defn ^:testable ^:private parse-info
   "Parse a semi-colon-delimited INFO field. Return a map."
   [parser s]
   (when (not= s ".")
     (into {} (map parser (map #(str/split % #"=") (str/split s #";"))))))
 
 ;; Again, we make no attempt to handle quoted strings.
-(defn- parse-format
+(defn ^:testable ^:private parse-format
   "Parse a colon-delimited FORMAT field, return a map."
   [parser fields s]
   (when (not= s ".")

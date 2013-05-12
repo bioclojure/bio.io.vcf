@@ -1,7 +1,7 @@
 (ns org.bioclojure.bio.io.vcf.header-parser
   (:require [clojure.java.io :as io]
-            [blancas.kern.core :refer :all]
-            [blancas.kern.lexer.basic :refer :all]))
+            [blancas.kern.core :refer [token* field* sym* bind many any-char return sep-by value >> <|>]]
+            [blancas.kern.lexer.basic :refer [string-lit dec-lit angles comma-sep token one-of]]))
 
 (def ^:private header-prefix
   (token* "##"))
@@ -42,7 +42,7 @@
 (def ^:private header
   (bind [_ header-prefix
          k header-key
-         _ (sym \=)
+         _ (sym* \=)
          v header-val]
         (return [k v])))
 

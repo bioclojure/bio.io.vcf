@@ -29,19 +29,33 @@
     (.close reader)))
 
 (defn vcf-reader
+  "Open a VCF for reading and parse the header. `vcf` can be anything
+  understood by clojure.java.io/input-stream. Gzip-compressed data is
+  detected and automatically decompressed."
   [vcf]
   (let [reader (io/reader (open-input-stream vcf))
         headers (parse-headers (take-while header? (line-seq reader)))]
     (VcfReader. reader headers)))
 
 (defn sample-ids
+  "Return a list of sample ids from the VCF."
   [vcf]
   (drop 9 (get-in vcf [:headers :columns])))
 
 (defn header
+  "Return the specified header from the VCF. When no keys are
+  specified, return a map with all headers from the VCF."
   [vcf & ks]
   (get-in vcf (into [:headers] ks)))
 
 (defn variant-seq
+  "Return a lazy sequence of parsed variants from the VCF. Akin to
+  line-seq."
   [vcf]
   (map (variant-parser (:headers vcf)) (line-seq (:reader vcf))))
+
+(defn pass?
+  "Returns true if any of the variant filter values are 'PASS',
+  otherwise false."
+  [variant]
+  (some #(= % "PASS") (:filter variant)))

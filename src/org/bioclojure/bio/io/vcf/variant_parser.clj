@@ -1,70 +1,64 @@
 (ns org.bioclojure.bio.io.vcf.variant-parser
-  (:require [blancas.kern.core :refer :all]
-            [blancas.kern.lexer.basic :refer :all]))
+  (:require [clojure.string :as str]
+            [org.bioclojure.bio.io.vcf.parser-util :refer [delimited-str missing]]
+            [blancas.kern.core :refer [value <|>]]
+            [blancas.kern.lexer.basic :refer [dec-lit float-lit comma-sep]]))
 
-(def ^:private tab-sep-str (sep-by tab (field* "\t")))
-
-(def ^:private semi-sep-str (sep-by (sym* \;)  (field* ";")))
-
-(def ^:private colon-sep-str (sep-by (sym* \:) (field* ":")))
-
-(def ^:private comma-sep-str (sep-by (sym* \,) (field* ",")))
-
-(def ^:private missing (>> (sym* \.) (return nil)))
-
-(defn- get-defined
-  [m k]
-  (when-let [v (get m k)]
-    (when (not= v ".") v)))
-
-(defn- parse-int
-  [m k]
-  (when-let [v (get-defined m k)]
-    (value dec-lit v)))
-
-(defn- parse-csv
-  [m k]
-  (if-let [v (get-defined m k)]
-    (value comma-sep-str v)
-    []))
-
-(defn- build-parsers
+(defn- build-parser
   "Construct a map of parsers for INFO or FORMAT fields, according to
-  the number and type defined in the headers."
+  the number and type defined in the headers. Return a function that takes
+  a key/value pair and returns a vector of key and (possibly parsed) value."
   [spec]
-  (letfn [(parser-for [{:keys [type number]}]
-            (case number
-              0 (constantly true)
-              1 (case type
-                  "Integer" (partial value (<|> missing dec-lit))
-                  "Float"   (partial value (<|> missing float-lit))
-                  identity)
-              (case type
-                "Integer" (partial value (comma-sep (<|> missing dec-lit)))
-                "Float"   (partial value (comma-sep (<|> missing float-lit)))
-                identity)))]  
-    (zipmap (keys spec) (map parser-for (vals spec)))))
+  (let [parser-for (fn [{:keys [type number]}]
+                     (case number
+                       0 (constantly true)
+                       1 (case type
+                           "Integer" (partial value (<|> missing dec-lit))
+                           "Float"   (partial value (<|> missing float-lit))
+                           identity)
+                       (case type
+                         "Integer" (partial value (comma-sep (<|> missing dec-lit)))
+                         "Float"   (partial value (comma-sep (<|> missing float-lit)))
+                         identity)))
+        parsers (zipmap (keys spec) (map parser-for (vals spec)))]
+    (fn [[k & [v]]]
+      (if-let [p (parsers k)]
+        [k (p v)]
+        [k v]))))
 
+;; N.B. This doesn't cope with quoted string values in an INFO field.
+;; The VCF specification isn't clear on whether or not the value can
+;; be quoted.
 (defn- parse-info
-  [m k parser-for]
-  (if-let [v (get-defined m k)]
-    (into {} (for [[k v] (map #(value (sep-by (sym* \=) (field* "=")) %) (value semi-sep-str v))
-                   :let [parse-value (or (parser-for k) identity)]]
-               [k (parse-value v)]))))
+  "Parse a semi-colon-delimited INFO field. Return a map."
+  [parser s]
+  (when (not= s ".")
+    (into {} (map parser (map #(str/split % #"=") (str/split s #";"))))))
 
-;; XXX TODO: parse genotypes and add to the data structure below
+;; Again, we make no attempt to handle quoted strings.
+(defn- parse-format
+  "Parse a colon-delimited FORMAT field, return a map."
+  [parser fields s]
+  (when (not= s ".")
+    (into {} (map parser (map vector fields (str/split s #":"))))))
+
 (defn variant-parser
+  "Given a parsed VCF header map, return a function that will parse a
+  variant row."
   [headers]
-  (let [sample-ids       (drop 9 (:columns headers))
-        info-parsers     (build-parsers (get headers "INFO"))
-        genotype-parsers (build-parsers (get headers "FORMAT"))]
+  (let [sample-ids    (drop 9 (:columns headers))
+        info-parser   (build-parser (get headers "INFO"))
+        format-parser (build-parser (get headers "FORMAT"))]
     (fn [s]
-      (let [raw (zipmap (:columns headers) (value tab-sep-str s))]
-        {:chr    (get raw "CHROM")
-         :pos    (parse-int raw "POS")
-         :id     (parse-csv raw "ID")
-         :ref    (get raw "REF")
-         :alt    (parse-csv raw "ALT")
-         :qual   (parse-int raw "QUAL")
-         :filter (parse-csv raw "FILTER")
-         :info   (parse-info raw "INFO" info-parsers)}))))
+      (let [m (zipmap (:columns headers) (str/split s #"\t"))
+            f (str/split (m "FORMAT") #":")]
+        {:chr    (m "CHROM")
+         :pos    (value dec-lit (m "POS"))
+         :id     (value (<|> missing (delimited-str \,)) (m "ID"))
+         :ref    (m "REF")
+         :alt    (str/split (m "ALT") #",")
+         :qual   (value (<|> missing dec-lit) (m "QUAL"))
+         :filter (value (<|> missing (delimited-str \,)) (m "FILTER"))
+         :info   (parse-info info-parser (m "INFO"))
+         :gtype  (zipmap sample-ids
+                         (map #(parse-format format-parser f (m %)) sample-ids))}))))

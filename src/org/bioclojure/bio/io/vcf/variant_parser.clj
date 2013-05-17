@@ -8,7 +8,7 @@
   "Construct a map of parsers for INFO or FORMAT fields, according to
   the number and type defined in the headers. Return a function that takes
   a key/value pair and returns a vector of key and (possibly parsed) value."
-  [spec]
+  [spec]  
   (let [parser-for (fn [{:keys [type number]}]
                      (case number
                        0 (constantly true)
@@ -20,7 +20,7 @@
                          "Integer" (partial value (comma-sep (<|> missing dec-lit)))
                          "Float"   (partial value (comma-sep (<|> missing float-lit)))
                          (partial value (comma-sep (<|> missing (field* ",")))))))
-        parsers (zipmap (keys spec) (map parser-for (vals spec)))]
+        parsers (if spec (zipmap (keys spec) (map parser-for (vals spec))) {})]
     (fn [[k & [v]]]
       (if-let [p (parsers k)]
         [k (p v)]
@@ -42,23 +42,40 @@
   (when (not= s ".")
     (into {} (map parser (map vector fields (str/split s #":"))))))
 
-(defn variant-parser
-  "Given a parsed VCF header map, return a function that will parse a
-  variant row."
-  [headers]
-  (let [sample-ids    (drop 9 (:columns headers))
-        info-parser   (build-parser (get headers "INFO"))
-        format-parser (build-parser (get headers "FORMAT"))]
+(defmacro parse-if-defined
+  [m k f]
+  `(when-let [v# (get ~m ~k)]
+     (when (not= v# ".") (~f v#))))
+
+(defn- variant-parser*
+  [columns info-parser format-parser]
+  (let [sample-ids (drop 9 columns)]
     (fn [s]
-      (let [m (zipmap (:columns headers) (str/split s #"\t"))
-            f (str/split (m "FORMAT") #":")]
+      (let [m (zipmap columns (str/split s #"\t"))
+            f (parse-if-defined m "FORMAT" #(str/split % #":"))]
         {:chr    (m "CHROM")
-         :pos    (value dec-lit (m "POS"))
-         :id     (value (<|> missing (delimited-str \;)) (m "ID"))
+         :pos    (Long/parseLong (m "POS"))
+         :id     (parse-if-defined m "ID" #(str/split % #";"))
          :ref    (m "REF")
-         :alt    (str/split (m "ALT") #",")
-         :qual   (value (<|> missing dec-lit) (m "QUAL"))
-         :filter (value (<|> missing (delimited-str \,)) (m "FILTER"))
-         :info   (parse-info info-parser (m "INFO"))
+         :alt    (parse-if-defined m "ALT" #(str/split % #","))
+         :qual   (parse-if-defined m "QUAL" #(Double/parseDouble %))
+         :filter (parse-if-defined m "FILTER" #(str/split % #","))
+         :info   (parse-if-defined m "INFO" #(parse-info info-parser %))
+         :format f
          :gtype  (zipmap sample-ids
-                         (map #(parse-format format-parser f (m %)) sample-ids))}))))
+                         (map (fn [id]
+                                (parse-if-defined m id (partial parse-format format-parser f)))
+                              sample-ids))}))))
+
+(defn basic-variant-parser
+  "Basic variant parser: faster than the default `variant-parser` as
+  it does not parse the INFO and FORMAT field values."
+  [headers]
+  (let [null-parser (fn [[k & [v]]] [k v])]
+    (variant-parser* (:columns headers) null-parser null-parser)))
+
+(defn variant-parser
+  [headers]
+  (variant-parser* (:columns headers)
+                   (build-parser (get headers "INFO"))
+                   (build-parser (get headers "FORMAT"))))

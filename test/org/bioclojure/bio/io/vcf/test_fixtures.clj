@@ -80,9 +80,10 @@
    :id ["rs6054257"]
    :ref "G"
    :alt ["A"]
-   :qual 29
+   :qual 29.0
    :filter ["PASS"]
    :info {"NS" 3 "DP" 14 "AF" [0.5] "DB" true "H2" true}
+   :format ["GT" "GQ" "DP" "HQ"]
    :gtype {"NA00001" {"GT" "0|0" "GQ" 48 "DP" 1 "HQ" [51 51]}
            "NA00002" {"GT" "1|0" "GQ" 48 "DP" 8 "HQ" [51 51]}
            "NA00003" {"GT" "1/1" "GQ" 43 "DP" 5 "HQ" [nil nil]}}})

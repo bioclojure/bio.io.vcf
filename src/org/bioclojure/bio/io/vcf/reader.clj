@@ -1,7 +1,7 @@
 (ns org.bioclojure.bio.io.vcf.reader
   (:require [clojure.java.io :as io]
-            [org.bioclojure.bio.io.vcf.header-parser :refer [parse-headers]]
-            [org.bioclojure.bio.io.vcf.variant-parser :refer [variant-parser]])
+            [org.bioclojure.bio.io.vcf.header-parser :as hp]
+            [org.bioclojure.bio.io.vcf.variant-parser :as vp])
   (:import [net.sf.samtools.util BlockCompressedInputStream]
            [java.io IOException]))
 
@@ -30,7 +30,7 @@
   detected and automatically decompressed."
   [vcf]
   (let [reader (io/reader (open-input-stream vcf))
-        headers (parse-headers (take-while header? (line-seq reader)))]
+        headers (hp/parse-headers (take-while header? (line-seq reader)))]
     (VcfReader. reader headers)))
 
 (defn sample-ids
@@ -44,11 +44,21 @@
   [vcf & ks]
   (get-in vcf (into [:headers] ks)))
 
-(defn variant-seq
-  "Return a lazy sequence of parsed variants from the VCF. Akin to
-  line-seq."
+(defn variant-seq*
+  [vcf variant-parser]
+  (map variant-parser (line-seq (:reader vcf))))
+
+(defn basic-variant-seq
+  "Return a lazy sequence of parsed variants from the VCF using a basic parser.
+  Faster than `variant-seq`, but does not parse the INFO and FORMAT field values."
   [vcf]
-  (map (variant-parser (:headers vcf)) (line-seq (:reader vcf))))
+  (variant-seq* vcf (vp/basic-variant-parser (:headers vcf))))
+
+(defn variant-seq
+  "Return a lazy sequence of parsed variants from the VCF using a full parser.
+  Parses the INFO and FORMAT field values according to the header specification."
+  [vcf]
+  (variant-seq* vcf (vp/variant-parser (:headers vcf))))
 
 (defn pass?
   "Returns true if any of the variant filter values are 'PASS',

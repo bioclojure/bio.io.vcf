@@ -2,23 +2,19 @@
   (:require [clojure.java.io :as io]
             [org.bioclojure.bio.io.vcf.header-parser :refer [parse-headers]]
             [org.bioclojure.bio.io.vcf.variant-parser :refer [variant-parser]])
-  (:import [java.util.zip GZIPInputStream]
+  (:import [net.sf.samtools.util BlockCompressedInputStream]
            [java.io IOException]))
 
 (def ^:private header? (partial re-find #"^#"))
 
 (defn- open-input-stream
-  "Attempt to open the stream `s` as a GZIP input stream. If it is not
-  in GZIP format, reset and return the raw stream."
+  "Open `s` as a BlockCompressedInputStream if it is in BGZF format, otherwise
+   as a BufferedInputStream."
   [s]
   (let [raw-stream (io/input-stream s)]
-    (try
-      (.mark raw-stream 1024)
-      (GZIPInputStream. raw-stream)
-      (catch IOException e
-        (if (= (.getMessage e) "Not in GZIP format")
-          (doto raw-stream (.reset))
-          (throw e))))))
+    (if (BlockCompressedInputStream/isValidFile raw-stream)
+      (BlockCompressedInputStream. raw-stream)
+      raw-stream)))
 
 ;; The VcfReader record stores a java.io.BufferedReader and the parsed
 ;; VCF headers. We implement the java.io.Closeable interface so that a

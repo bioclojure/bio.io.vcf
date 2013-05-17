@@ -32,7 +32,7 @@ Load the reader:
 The main entry point is the `vcf-reader` function. This takes a VCF as
 its only argument, which can be anything understood by
 `clojure.java.io/input-stream` (string, File, URI, ...). A
-Gzip-compressed input stream will be detected and automatically
+bgzip-compressed (BGZF) input stream will be detected and automatically
 decompressed.
 
 `vcf-reader` should be called inside of `with-open` to ensure the

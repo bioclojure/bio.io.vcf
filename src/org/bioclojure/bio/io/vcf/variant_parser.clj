@@ -54,7 +54,7 @@
             f (str/split (m "FORMAT") #":")]
         {:chr    (m "CHROM")
          :pos    (value dec-lit (m "POS"))
-         :id     (value (<|> missing (delimited-str \,)) (m "ID"))
+         :id     (value (<|> missing (delimited-str \;)) (m "ID"))
          :ref    (m "REF")
          :alt    (str/split (m "ALT") #",")
          :qual   (value (<|> missing dec-lit) (m "QUAL"))

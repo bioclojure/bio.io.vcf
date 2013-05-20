@@ -1,4 +1,4 @@
-(defproject org.bioclojure/bio.io.vcf "0.1.0"
+(defproject org.bioclojure/bio.io.vcf "0.2.0-SNAPSHOT"
   :description "Library for working with VCF (Variant Call Format) files"
   :url "https://github.com/bioclojure/bio.io.vcf"
   :license {:name "Eclipse Public License"

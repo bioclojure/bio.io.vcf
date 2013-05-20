@@ -11,14 +11,14 @@ Available from [Clojars](https://clojars.org/org.bioclojure/bio.io.vcf)
 
 ### Leiningen
 
-    [org.bioclojure/bio.io.vcf "0.1.0-SNAPSHOT"]
+    [org.bioclojure/bio.io.vcf "0.1.0"]
 
 ### Maven
 
     <dependency>
       <groupId>org.bioclojure</groupId>
       <artifactId>bio.io.vcf</artifactId>
-      <version>0.1.0-SNAPSHOT</version>
+      <version>0.1.0</version>
     </dependency>
 
 ## Usage
